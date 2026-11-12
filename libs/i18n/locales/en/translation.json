@@ -2371,6 +2371,7 @@
   "OpenShift": "OpenShift",
   "Kubernetes": "Kubernetes",
   "Ansible Automation Platform": "Ansible Automation Platform",
+  "Detected (details unavailable)": "Detected (details unavailable)",
   "Single Container application": "Single Container application",
   "Quadlet application": "Quadlet application",
   "Helm application": "Helm application",
