@@ -74,6 +74,71 @@ export const getEndTime = (startTime: string, duration?: Duration) => {
   return `${formatTimePart(newHours)}:${formatTimePart(newMinutes)}`;
 };
 
+// Returns true iff the cron expression can be represented by the structured schedule form.
+// Accepts empty/undefined, or exactly 5 tokens where minutes is 0–59, hours is 0–23,
+// day-of-month is *, month is *, and weekday is * or a comma-list of ints 0–6.
+export const isUpdateCronRepresentable = (at?: string): boolean => {
+  // Empty or undefined is representable
+  if (!at) {
+    return true;
+  }
+
+  const tokens = at.split(/\s+/).filter(Boolean);
+
+  // Must have exactly 5 tokens
+  if (tokens.length !== 5) {
+    return false;
+  }
+
+  const minutes = tokens[CronParts.Minutes];
+  const hours = tokens[CronParts.Hours];
+  const days = tokens[CronParts.Days];
+  const months = tokens[CronParts.Months];
+  const weekDays = tokens[CronParts.WeekDays];
+
+  // Day-of-month must be *
+  if (days !== '*') {
+    return false;
+  }
+
+  // Month must be *
+  if (months !== '*') {
+    return false;
+  }
+
+  // Minutes must be a single int 0–59
+  const minuteNum = Number(minutes);
+  if (!Number.isInteger(minuteNum) || minuteNum < 0 || minuteNum > 59) {
+    return false;
+  }
+
+  // Hours must be a single int 0–23
+  const hourNum = Number(hours);
+  if (!Number.isInteger(hourNum) || hourNum < 0 || hourNum > 23) {
+    return false;
+  }
+
+  // Weekday must be * or a comma-list of ints 0–6
+  if (weekDays === '*') {
+    return true;
+  }
+
+  const dayParts = weekDays.split(',');
+  for (const part of dayParts) {
+    const trimmed = part.trim();
+    // Each part must be a digit-only string
+    if (!/^\d+$/.test(trimmed)) {
+      return false;
+    }
+    const dayNum = Number(trimmed);
+    if (dayNum < 0 || dayNum > 6) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 // Cron expression example: "0 4 * * 2,5"
 export const getTime = (cronExp?: string) => {
   const tokens = (cronExp || '').split(' ').filter(Boolean);
