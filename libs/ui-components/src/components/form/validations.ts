@@ -1421,9 +1421,7 @@ export const validUpdatePolicySchema = (t: TFunction) => {
     downloadEndsAt: Yup.string().when('downloadIsAdvanced', ([downloadIsAdvanced]) => {
       return downloadIsAdvanced ? Yup.string() : requiredDownloadTimes(t, false);
     }),
-    downloadStartGraceDuration: Yup.string().when('downloadIsAdvanced', ([downloadIsAdvanced]) => {
-      return downloadIsAdvanced ? Yup.string() : requiredStartGraceDuration(t, false);
-    }),
+    downloadStartGraceDuration: requiredStartGraceDuration(t, false),
     downloadScheduleMode: Yup.string().oneOf([UpdateScheduleMode.Weekly, UpdateScheduleMode.Daily]).required(),
     downloadWeekDays: Yup.array().when('downloadIsAdvanced', ([downloadIsAdvanced]) => {
       return downloadIsAdvanced ? Yup.array() : updateWeekDaysSchema(t);
@@ -1435,9 +1433,7 @@ export const validUpdatePolicySchema = (t: TFunction) => {
     installEndsAt: Yup.string().when('installIsAdvanced', ([installIsAdvanced]) => {
       return installIsAdvanced ? Yup.string() : requiredInstallTimes(t, false);
     }),
-    installStartGraceDuration: Yup.string().when('installIsAdvanced', ([installIsAdvanced]) => {
-      return installIsAdvanced ? Yup.string() : requiredStartGraceDuration(t, true);
-    }),
+    installStartGraceDuration: requiredStartGraceDuration(t, true),
     installScheduleMode: Yup.string().oneOf([UpdateScheduleMode.Weekly, UpdateScheduleMode.Daily]).required(),
     installWeekDays: Yup.array().when('installIsAdvanced', ([installIsAdvanced]) => {
       return installIsAdvanced ? Yup.array() : updateWeekDaysSchema(t);

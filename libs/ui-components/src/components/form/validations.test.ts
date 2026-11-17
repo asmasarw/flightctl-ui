@@ -230,4 +230,46 @@ describe('update policy advanced cron validation', () => {
     };
     await expect(updatePolicySchema.isValid(form)).resolves.toBe(false);
   });
+
+  it('rejects malformed grace duration in advanced download block', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadIsAdvanced: true,
+      downloadCron: '0 0-9 * * *',
+      downloadStartGraceDuration: 'xyz',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(false);
+  });
+
+  it('accepts valid grace duration in advanced download block', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadIsAdvanced: true,
+      downloadCron: '0 0-9 * * *',
+      downloadStartGraceDuration: '30m',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(true);
+  });
+
+  it('rejects malformed grace duration in advanced install block', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadAndInstallDiffer: true,
+      installIsAdvanced: true,
+      installCron: '30 2 * * 1-5',
+      installStartGraceDuration: 'xyz',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(false);
+  });
+
+  it('accepts valid grace duration in advanced install block', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadAndInstallDiffer: true,
+      installIsAdvanced: true,
+      installCron: '30 2 * * 1-5',
+      installStartGraceDuration: '30m',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(true);
+  });
 });
