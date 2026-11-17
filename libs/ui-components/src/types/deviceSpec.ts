@@ -344,12 +344,16 @@ export type DisruptionBudgetForm = DisruptionBudget & {
 export type UpdatePolicyForm = {
   isCustomized: boolean;
   downloadAndInstallDiffer: boolean;
+  downloadIsAdvanced: boolean;
+  downloadCron: string;
   downloadStartsAt?: string;
   downloadEndsAt?: string;
   downloadStartGraceDuration?: string;
   downloadScheduleMode: UpdateScheduleMode;
   downloadWeekDays: boolean[];
   downloadTimeZone: string;
+  installIsAdvanced: boolean;
+  installCron: string;
   installStartsAt?: string;
   installEndsAt?: string;
   installStartGraceDuration?: string;

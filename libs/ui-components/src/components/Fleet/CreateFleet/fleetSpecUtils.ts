@@ -84,6 +84,8 @@ export const getUpdatePolicyValues = (updateSpec?: DeviceUpdatePolicySpec): Upda
   return {
     isCustomized: Boolean(updateSpec?.downloadSchedule?.at || updateSpec?.updateSchedule?.at),
     downloadAndInstallDiffer: !isEqual,
+    downloadIsAdvanced: !timeUtils.isUpdateCronRepresentable(updateSpec?.downloadSchedule?.at),
+    downloadCron: updateSpec?.downloadSchedule?.at ?? '',
     downloadStartsAt,
     downloadEndsAt: timeUtils.getEndTime(downloadStartsAt, downloadStartGraceDuration),
     downloadStartGraceDuration,
@@ -92,6 +94,8 @@ export const getUpdatePolicyValues = (updateSpec?: DeviceUpdatePolicySpec): Upda
       ? timeUtils.UpdateScheduleMode.Daily
       : timeUtils.UpdateScheduleMode.Weekly,
     downloadTimeZone: updateSpec?.downloadSchedule?.timeZone || timeUtils.localDeviceTimezone,
+    installIsAdvanced: !timeUtils.isUpdateCronRepresentable(updateSpec?.updateSchedule?.at),
+    installCron: updateSpec?.updateSchedule?.at ?? '',
     installStartsAt,
     installEndsAt: timeUtils.getEndTime(installStartsAt, installStartGraceDuration),
     installStartGraceDuration,
