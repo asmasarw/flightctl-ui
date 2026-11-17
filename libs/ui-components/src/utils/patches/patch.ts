@@ -150,14 +150,18 @@ const DELTA_GENERATION_PATH = `${ROLLOUT_POLICY_PATH}/deltaGeneration`;
 
 export const updatePolicyFormToApi = (form: Required<UpdatePolicyForm>) => {
   const downloadSchedule = {
-    at: getUpdateCronExpression(form.downloadStartsAt, form.downloadScheduleMode, form.downloadWeekDays),
+    at: form.downloadIsAdvanced
+      ? form.downloadCron
+      : getUpdateCronExpression(form.downloadStartsAt, form.downloadScheduleMode, form.downloadWeekDays),
     startGraceDuration: form.downloadStartGraceDuration || '0s',
     timeZone: form.downloadTimeZone === localDeviceTimezone ? undefined : form.downloadTimeZone,
   };
   let updateSchedule: UpdateSchedule;
   if (form.downloadAndInstallDiffer) {
     updateSchedule = {
-      at: getUpdateCronExpression(form.installStartsAt, form.installScheduleMode, form.installWeekDays),
+      at: form.installIsAdvanced
+        ? form.installCron
+        : getUpdateCronExpression(form.installStartsAt, form.installScheduleMode, form.installWeekDays),
       startGraceDuration: form.installStartGraceDuration || '0s',
       timeZone: form.installTimeZone === localDeviceTimezone ? undefined : form.installTimeZone,
     };
