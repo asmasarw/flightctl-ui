@@ -4,8 +4,14 @@ import * as Yup from 'yup';
 import { getIn, yupToFormErrors } from 'formik';
 
 import { AppType } from '@flightctl/types';
-import { AppSpecType, type ApplicationEntry, type PortMapping } from '../../types/deviceSpec';
-import { isDuplicatePortMapping, validApplicationsSchema } from './validations';
+import {
+  AppSpecType,
+  type ApplicationEntry,
+  type PortMapping,
+  type UpdatePolicyForm,
+} from '../../types/deviceSpec';
+import { UpdateScheduleMode } from '../../utils/time';
+import { isDuplicatePortMapping, validApplicationsSchema, validUpdatePolicySchema } from './validations';
 
 const app = (name: string, ports: PortMapping[]): ApplicationEntry => ({
   type: 'manual',
@@ -145,5 +151,88 @@ describe('container host port validation', () => {
 
   it('detects an occupied host port in the port editor regardless of target port', () => {
     expect(isDuplicatePortMapping('8080', '81', [{ hostPort: '8080', targetPort: '80' }])).toBe(true);
+  });
+});
+
+describe('update policy advanced cron validation', () => {
+  const t = (s: string) => s;
+  const updatePolicySchema = validUpdatePolicySchema(t);
+
+  const baseUpdatePolicyForm: UpdatePolicyForm = {
+    isCustomized: true,
+    downloadAndInstallDiffer: false,
+    downloadIsAdvanced: false,
+    downloadCron: '',
+    downloadStartsAt: '09:00',
+    downloadEndsAt: '17:00',
+    downloadStartGraceDuration: '1h',
+    downloadScheduleMode: UpdateScheduleMode.Daily,
+    downloadWeekDays: [false, false, false, false, false, false, false],
+    downloadTimeZone: 'UTC',
+    installIsAdvanced: false,
+    installCron: '',
+    installStartsAt: '09:00',
+    installEndsAt: '17:00',
+    installStartGraceDuration: '1h',
+    installScheduleMode: UpdateScheduleMode.Daily,
+    installWeekDays: [false, false, false, false, false, false, false],
+    installTimeZone: 'UTC',
+  };
+
+  it('accepts valid cron when download block is advanced', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadIsAdvanced: true,
+      downloadCron: '0 0-9 * * *',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(true);
+  });
+
+  it('rejects invalid cron syntax in advanced download block', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadIsAdvanced: true,
+      downloadCron: 'not a cron',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(false);
+  });
+
+  it('rejects empty cron in advanced download block when customized', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadIsAdvanced: true,
+      downloadCron: '',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(false);
+  });
+
+  it('enforces structured rules when download block is not advanced', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadIsAdvanced: false,
+      downloadScheduleMode: UpdateScheduleMode.Weekly,
+      downloadWeekDays: [false, false, false, false, false, false, false], // No days selected
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(false);
+  });
+
+  it('accepts valid cron when install block is advanced', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadAndInstallDiffer: true,
+      installIsAdvanced: true,
+      installCron: '30 2 * * 1-5',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(true);
+  });
+
+  it('rejects invalid cron syntax in advanced install block', async () => {
+    const form: UpdatePolicyForm = {
+      ...baseUpdatePolicyForm,
+      downloadAndInstallDiffer: true,
+      installIsAdvanced: true,
+      installCron: 'invalid',
+    };
+    await expect(updatePolicySchema.isValid(form)).resolves.toBe(false);
   });
 });

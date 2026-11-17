@@ -1354,6 +1354,18 @@ const validDeltaGenerationDuration = (t: TFunction) =>
     return Yup.string();
   });
 
+// Permissive 5-field cron well-formedness check
+// Accepts exactly 5 non-empty whitespace-separated tokens, each matching /^[A-Za-z0-9*,/-]+$/
+// The backend is the authoritative validator; this is just a basic sanity check
+const isValidCronExpression = (value: string): boolean => {
+  const tokens = value.trim().split(/\s+/);
+  if (tokens.length !== 5) {
+    return false;
+  }
+  const tokenPattern = /^[A-Za-z0-9*,/-]+$/;
+  return tokens.every((token) => token.length > 0 && tokenPattern.test(token));
+};
+
 const updateWeekDaysSchema = (t: TFunction) =>
   Yup.array()
     .required()
@@ -1363,7 +1375,7 @@ const updateWeekDaysSchema = (t: TFunction) =>
       t('Select at least one day of the week for "weekly" schedules'),
       (selectedDays: boolean[], { path, parent }) => {
         const parentWeekMode =
-          path === 'updatePolicy.downloadWeekDays'
+          path === 'updatePolicy.downloadWeekDays' || path === 'downloadWeekDays'
             ? (parent as UpdatePolicyForm).downloadScheduleMode
             : (parent as UpdatePolicyForm).installScheduleMode;
 
@@ -1379,18 +1391,57 @@ export const validUpdatePolicySchema = (t: TFunction) => {
   return Yup.object().shape({
     isCustomized: Yup.boolean().required(),
     downloadAndInstallDiffer: Yup.boolean().required(),
-    // Fields are flattened so "isCustomized" can be used for validating them
-    downloadStartsAt: requiredDownloadTimes(t, true),
-    downloadEndsAt: requiredDownloadTimes(t, false),
-    downloadStartGraceDuration: requiredStartGraceDuration(t, false),
+    // Advanced mode fields
+    downloadIsAdvanced: Yup.boolean().required(),
+    downloadCron: Yup.string().when(['isCustomized', 'downloadIsAdvanced'], ([isCustomized, downloadIsAdvanced]) => {
+      if (isCustomized && downloadIsAdvanced) {
+        return Yup.string()
+          .required(t('Cron expression is required'))
+          .test('valid-cron', t('Cron expression must have 5 fields (minute hour day month weekday)'), (value) => {
+            return value ? isValidCronExpression(value) : false;
+          });
+      }
+      return Yup.string();
+    }),
+    installIsAdvanced: Yup.boolean().required(),
+    installCron: Yup.string().when(['isCustomized', 'installIsAdvanced'], ([isCustomized, installIsAdvanced]) => {
+      if (isCustomized && installIsAdvanced) {
+        return Yup.string()
+          .required(t('Cron expression is required'))
+          .test('valid-cron', t('Cron expression must have 5 fields (minute hour day month weekday)'), (value) => {
+            return value ? isValidCronExpression(value) : false;
+          });
+      }
+      return Yup.string();
+    }),
+    // Structured fields (validated only when not in advanced mode)
+    downloadStartsAt: Yup.string().when('downloadIsAdvanced', ([downloadIsAdvanced]) => {
+      return downloadIsAdvanced ? Yup.string() : requiredDownloadTimes(t, true);
+    }),
+    downloadEndsAt: Yup.string().when('downloadIsAdvanced', ([downloadIsAdvanced]) => {
+      return downloadIsAdvanced ? Yup.string() : requiredDownloadTimes(t, false);
+    }),
+    downloadStartGraceDuration: Yup.string().when('downloadIsAdvanced', ([downloadIsAdvanced]) => {
+      return downloadIsAdvanced ? Yup.string() : requiredStartGraceDuration(t, false);
+    }),
     downloadScheduleMode: Yup.string().oneOf([UpdateScheduleMode.Weekly, UpdateScheduleMode.Daily]).required(),
-    downloadWeekDays: updateWeekDaysSchema(t),
+    downloadWeekDays: Yup.array().when('downloadIsAdvanced', ([downloadIsAdvanced]) => {
+      return downloadIsAdvanced ? Yup.array() : updateWeekDaysSchema(t);
+    }),
     downloadTimeZone: Yup.string().required(t('Select the timezone for downloading updates')),
-    installStartsAt: requiredInstallTimes(t, true),
-    installEndsAt: requiredInstallTimes(t, false),
-    installStartGraceDuration: requiredStartGraceDuration(t, true),
+    installStartsAt: Yup.string().when('installIsAdvanced', ([installIsAdvanced]) => {
+      return installIsAdvanced ? Yup.string() : requiredInstallTimes(t, true);
+    }),
+    installEndsAt: Yup.string().when('installIsAdvanced', ([installIsAdvanced]) => {
+      return installIsAdvanced ? Yup.string() : requiredInstallTimes(t, false);
+    }),
+    installStartGraceDuration: Yup.string().when('installIsAdvanced', ([installIsAdvanced]) => {
+      return installIsAdvanced ? Yup.string() : requiredStartGraceDuration(t, true);
+    }),
     installScheduleMode: Yup.string().oneOf([UpdateScheduleMode.Weekly, UpdateScheduleMode.Daily]).required(),
-    installWeekDays: updateWeekDaysSchema(t),
+    installWeekDays: Yup.array().when('installIsAdvanced', ([installIsAdvanced]) => {
+      return installIsAdvanced ? Yup.array() : updateWeekDaysSchema(t);
+    }),
     installTimeZone: Yup.string().required(t('Select the timezone for installing updates')),
   });
 };
