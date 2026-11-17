@@ -5,7 +5,7 @@ import type { DeviceUpdatePolicySpec } from '@flightctl/types';
 describe('getUpdatePolicyValues', () => {
   it('should mark representable download cron as not advanced and preserve raw cron', () => {
     const updateSpec: DeviceUpdatePolicySpec = {
-      downloadSchedule: { at: '0 2 * * *' },
+      downloadSchedule: { at: '0 2 * * *', startGraceDuration: '0s' },
     };
 
     const result = getUpdatePolicyValues(updateSpec);
@@ -17,7 +17,7 @@ describe('getUpdatePolicyValues', () => {
 
   it('should mark complex download cron as advanced and preserve raw cron', () => {
     const updateSpec: DeviceUpdatePolicySpec = {
-      downloadSchedule: { at: '0 0-9 * * *' },
+      downloadSchedule: { at: '0 0-9 * * *', startGraceDuration: '0s' },
     };
 
     const result = getUpdatePolicyValues(updateSpec);
@@ -38,8 +38,8 @@ describe('getUpdatePolicyValues', () => {
 
   it('should handle differing schedules with mixed advanced states', () => {
     const updateSpec: DeviceUpdatePolicySpec = {
-      downloadSchedule: { at: '0 2 * * *' },
-      updateSchedule: { at: '0 2 * * 1-5' },
+      downloadSchedule: { at: '0 2 * * *', startGraceDuration: '0s' },
+      updateSchedule: { at: '0 2 * * 1-5', startGraceDuration: '0s' },
     };
 
     const result = getUpdatePolicyValues(updateSpec);

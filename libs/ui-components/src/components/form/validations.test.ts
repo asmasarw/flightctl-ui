@@ -4,12 +4,7 @@ import * as Yup from 'yup';
 import { getIn, yupToFormErrors } from 'formik';
 
 import { AppType } from '@flightctl/types';
-import {
-  AppSpecType,
-  type ApplicationEntry,
-  type PortMapping,
-  type UpdatePolicyForm,
-} from '../../types/deviceSpec';
+import { AppSpecType, type ApplicationEntry, type PortMapping, type UpdatePolicyForm } from '../../types/deviceSpec';
 import { UpdateScheduleMode } from '../../utils/time';
 import { isDuplicatePortMapping, validApplicationsSchema, validUpdatePolicySchema } from './validations';
 

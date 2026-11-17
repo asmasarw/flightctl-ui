@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { isUpdateCronRepresentable, cronToStructuredSchedule, structuredToCron, UpdateScheduleMode } from './time';
+import { describe, expect, it } from 'vitest';
+import { UpdateScheduleMode, cronToStructuredSchedule, isUpdateCronRepresentable, structuredToCron } from './time';
 
 describe('isUpdateCronRepresentable', () => {
   it('returns true for undefined', () => {
@@ -98,15 +98,7 @@ describe('structuredToCron', () => {
   });
 
   it('converts structured weekly schedule to cron', () => {
-    const result = structuredToCron('14:30', UpdateScheduleMode.Weekly, [
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-    ]);
+    const result = structuredToCron('14:30', UpdateScheduleMode.Weekly, [false, true, false, true, false, true, false]);
     expect(result).toBe('30 14 * * 1,3,5');
   });
 });

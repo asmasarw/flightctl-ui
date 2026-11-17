@@ -108,6 +108,14 @@ export const getUpdatePolicyValues = (updateSpec?: DeviceUpdatePolicySpec): Upda
 };
 
 export const getDownloadPolicyText = (updatePolicy: UpdatePolicyForm, t: TFunction): string => {
+  if (updatePolicy.downloadIsAdvanced) {
+    return timeUtils.getAdvancedScheduleUpdateText(
+      updatePolicy.downloadCron,
+      updatePolicy.downloadTimeZone,
+      updatePolicy.downloadStartGraceDuration,
+      t,
+    );
+  }
   return timeUtils.getScheduleUpdateText(
     {
       startsAt: updatePolicy.downloadStartsAt,
@@ -122,6 +130,14 @@ export const getDownloadPolicyText = (updatePolicy: UpdatePolicyForm, t: TFuncti
 };
 
 export const getInstallPolicyText = (updatePolicy: UpdatePolicyForm, t: TFunction): string => {
+  if (updatePolicy.installIsAdvanced) {
+    return timeUtils.getAdvancedScheduleUpdateText(
+      updatePolicy.installCron,
+      updatePolicy.installTimeZone,
+      updatePolicy.installStartGraceDuration,
+      t,
+    );
+  }
   return timeUtils.getScheduleUpdateText(
     {
       startsAt: updatePolicy.installStartsAt,

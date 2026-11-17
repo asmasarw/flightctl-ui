@@ -69,6 +69,7 @@ const ScheduleBlock = ({
   isReadOnly,
 }: ScheduleBlockProps) => {
   const { t } = useTranslation();
+  const { setFieldValue } = useFormikContext<FleetFormValues>();
 
   let ariaLabel: string;
   let helperContent: string;
@@ -109,117 +110,177 @@ const ScheduleBlock = ({
     return match ? `${timeUtils.formatTimePart(match[1])}:${match[2]}` : timeUtils.defaultStartTime;
   }, []);
 
-  const scheduleMode =
-    blockType === ScheduleBlockType.Download ? updatePolicy.downloadScheduleMode : updatePolicy.installScheduleMode;
+  const isDownload = blockType === ScheduleBlockType.Download;
+  const scheduleMode = isDownload ? updatePolicy.downloadScheduleMode : updatePolicy.installScheduleMode;
   const isWeekly = scheduleMode === timeUtils.UpdateScheduleMode.Weekly;
+
+  const isAdvanced = isDownload ? updatePolicy.downloadIsAdvanced : updatePolicy.installIsAdvanced;
+  const cron = isDownload ? updatePolicy.downloadCron : updatePolicy.installCron;
+  const startsAt = isDownload ? updatePolicy.downloadStartsAt : updatePolicy.installStartsAt;
+  const weekDays = isDownload ? updatePolicy.downloadWeekDays : updatePolicy.installWeekDays;
+  const startGraceDuration = isDownload
+    ? updatePolicy.downloadStartGraceDuration
+    : updatePolicy.installStartGraceDuration;
+
+  // When the current cron can't be represented in the structured editor, we lock the toggle "on".
+  const isToggleLocked = isAdvanced && !timeUtils.isUpdateCronRepresentable(cron);
+
+  const onToggleAdvanced = (checked: boolean) => {
+    if (checked) {
+      // Structured → advanced: always allowed. Seed the cron field from the current structured values.
+      setFieldValue(
+        `updatePolicy.${blockType}Cron`,
+        timeUtils.structuredToCron(startsAt || timeUtils.defaultStartTime, scheduleMode, weekDays),
+      );
+      setFieldValue(`updatePolicy.${blockType}IsAdvanced`, true);
+    } else {
+      // Advanced → structured: only allowed when the current cron is representable.
+      if (!timeUtils.isUpdateCronRepresentable(cron)) {
+        return;
+      }
+      const structured = timeUtils.cronToStructuredSchedule(cron, startGraceDuration);
+      setFieldValue(`updatePolicy.${blockType}StartsAt`, structured.startsAt);
+      setFieldValue(`updatePolicy.${blockType}EndsAt`, structured.endsAt);
+      setFieldValue(`updatePolicy.${blockType}WeekDays`, structured.weekDays);
+      setFieldValue(`updatePolicy.${blockType}ScheduleMode`, structured.scheduleMode);
+      setFieldValue(`updatePolicy.${blockType}IsAdvanced`, false);
+    }
+  };
 
   return (
     <Stack hasGutter>
       <StackItem>
+        <Checkbox
+          id={`updatePolicy.${blockType}IsAdvanced`}
+          label={t('Edit as cron expression')}
+          isChecked={isAdvanced}
+          isDisabled={isReadOnly || isToggleLocked}
+          onChange={(_, checked) => onToggleAdvanced(checked)}
+          description={
+            isToggleLocked
+              ? t("This schedule uses an advanced cron expression that can't be shown in the simple editor.")
+              : undefined
+          }
+        />
+      </StackItem>
+      <StackItem>
         <FormGroupWithHelperText isRequired label={ariaLabel} content={helperContent}>
-          <Flex>
-            <FlexItem>
-              <FormSelectTypeahead
-                name={`updatePolicy.${blockType}StartsAt`}
-                placeholderText={t('Enter time (hh:mm)', { nsSeparator: '|' })}
-                defaultId={timeUtils.defaultStartTime}
-                items={selectableTimes}
-                isValidTypedItem={isValidTypedItem}
-                transformTypedItem={transformTypedItem}
-                isDisabled={isReadOnly}
-              />
-            </FlexItem>
-            <FlexItem>
-              <FormSelectTypeahead
-                name={`updatePolicy.${blockType}EndsAt`}
-                placeholderText={t('Enter time (hh:mm)', { nsSeparator: '|' })}
-                defaultId={timeUtils.defaultEndTime}
-                items={selectableTimes}
-                isValidTypedItem={isValidTypedItem}
-                transformTypedItem={transformTypedItem}
-                isDisabled={isReadOnly}
-              />
-            </FlexItem>
-            <FlexItem>
-              <RadioField
-                id={`daily-${blockType}`}
-                name={`updatePolicy.${blockType}ScheduleMode`}
-                label={t('Daily')}
-                checkedValue={timeUtils.UpdateScheduleMode.Daily}
-                isDisabled={isReadOnly}
-              />
-            </FlexItem>
-            <FlexItem>
-              <RadioField
-                id={`weekly-${blockType}`}
-                name={`updatePolicy.${blockType}ScheduleMode`}
-                label={t('Weekly')}
-                checkedValue={timeUtils.UpdateScheduleMode.Weekly}
-                onChangeCustom={() => onScheduleModeSwitch(blockType)}
-                isDisabled={isReadOnly}
-              />
-            </FlexItem>
-          </Flex>
+          {isAdvanced ? (
+            <TextField
+              name={`updatePolicy.${blockType}Cron`}
+              aria-label={t('Cron expression')}
+              placeholder="0 2 * * 1-5"
+              helperText={t('Enter a 5-field cron expression: minute hour day-of-month month day-of-week.')}
+              isRequired
+              isDisabled={isReadOnly}
+            />
+          ) : (
+            <>
+              <Flex>
+                <FlexItem>
+                  <FormSelectTypeahead
+                    name={`updatePolicy.${blockType}StartsAt`}
+                    placeholderText={t('Enter time (hh:mm)', { nsSeparator: '|' })}
+                    defaultId={timeUtils.defaultStartTime}
+                    items={selectableTimes}
+                    isValidTypedItem={isValidTypedItem}
+                    transformTypedItem={transformTypedItem}
+                    isDisabled={isReadOnly}
+                  />
+                </FlexItem>
+                <FlexItem>
+                  <FormSelectTypeahead
+                    name={`updatePolicy.${blockType}EndsAt`}
+                    placeholderText={t('Enter time (hh:mm)', { nsSeparator: '|' })}
+                    defaultId={timeUtils.defaultEndTime}
+                    items={selectableTimes}
+                    isValidTypedItem={isValidTypedItem}
+                    transformTypedItem={transformTypedItem}
+                    isDisabled={isReadOnly}
+                  />
+                </FlexItem>
+                <FlexItem>
+                  <RadioField
+                    id={`daily-${blockType}`}
+                    name={`updatePolicy.${blockType}ScheduleMode`}
+                    label={t('Daily')}
+                    checkedValue={timeUtils.UpdateScheduleMode.Daily}
+                    isDisabled={isReadOnly}
+                  />
+                </FlexItem>
+                <FlexItem>
+                  <RadioField
+                    id={`weekly-${blockType}`}
+                    name={`updatePolicy.${blockType}ScheduleMode`}
+                    label={t('Weekly')}
+                    checkedValue={timeUtils.UpdateScheduleMode.Weekly}
+                    onChangeCustom={() => onScheduleModeSwitch(blockType)}
+                    isDisabled={isReadOnly}
+                  />
+                </FlexItem>
+              </Flex>
 
-          {isWeekly && (
-            <FieldArray name={`updatePolicy.${blockType}WeekDays`}>
-              {() => (
-                <>
-                  <Flex>
-                    <FlexItem>
-                      <CheckboxFieldGroupValidation
-                        name={`updatePolicy.${blockType}WeekDays[0]`}
-                        label={t('Sun')}
-                        isDisabled={isReadOnly}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <CheckboxFieldGroupValidation
-                        name={`updatePolicy.${blockType}WeekDays[1]`}
-                        label={t('Mon')}
-                        isDisabled={isReadOnly}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <CheckboxFieldGroupValidation
-                        name={`updatePolicy.${blockType}WeekDays[2]`}
-                        label={t('Tue')}
-                        isDisabled={isReadOnly}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <CheckboxFieldGroupValidation
-                        name={`updatePolicy.${blockType}WeekDays[3]`}
-                        label={t('Wed')}
-                        isDisabled={isReadOnly}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <CheckboxFieldGroupValidation
-                        name={`updatePolicy.${blockType}WeekDays[4]`}
-                        label={t('Thu')}
-                        isDisabled={isReadOnly}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <CheckboxFieldGroupValidation
-                        name={`updatePolicy.${blockType}WeekDays[5]`}
-                        label={t('Fri')}
-                        isDisabled={isReadOnly}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <CheckboxFieldGroupValidation
-                        name={`updatePolicy.${blockType}WeekDays[6]`}
-                        label={t('Sat')}
-                        isDisabled={isReadOnly}
-                      />
-                    </FlexItem>
-                  </Flex>
-                  <ErrorHelperText error={weekDayError} />
-                </>
+              {isWeekly && (
+                <FieldArray name={`updatePolicy.${blockType}WeekDays`}>
+                  {() => (
+                    <>
+                      <Flex>
+                        <FlexItem>
+                          <CheckboxFieldGroupValidation
+                            name={`updatePolicy.${blockType}WeekDays[0]`}
+                            label={t('Sun')}
+                            isDisabled={isReadOnly}
+                          />
+                        </FlexItem>
+                        <FlexItem>
+                          <CheckboxFieldGroupValidation
+                            name={`updatePolicy.${blockType}WeekDays[1]`}
+                            label={t('Mon')}
+                            isDisabled={isReadOnly}
+                          />
+                        </FlexItem>
+                        <FlexItem>
+                          <CheckboxFieldGroupValidation
+                            name={`updatePolicy.${blockType}WeekDays[2]`}
+                            label={t('Tue')}
+                            isDisabled={isReadOnly}
+                          />
+                        </FlexItem>
+                        <FlexItem>
+                          <CheckboxFieldGroupValidation
+                            name={`updatePolicy.${blockType}WeekDays[3]`}
+                            label={t('Wed')}
+                            isDisabled={isReadOnly}
+                          />
+                        </FlexItem>
+                        <FlexItem>
+                          <CheckboxFieldGroupValidation
+                            name={`updatePolicy.${blockType}WeekDays[4]`}
+                            label={t('Thu')}
+                            isDisabled={isReadOnly}
+                          />
+                        </FlexItem>
+                        <FlexItem>
+                          <CheckboxFieldGroupValidation
+                            name={`updatePolicy.${blockType}WeekDays[5]`}
+                            label={t('Fri')}
+                            isDisabled={isReadOnly}
+                          />
+                        </FlexItem>
+                        <FlexItem>
+                          <CheckboxFieldGroupValidation
+                            name={`updatePolicy.${blockType}WeekDays[6]`}
+                            label={t('Sat')}
+                            isDisabled={isReadOnly}
+                          />
+                        </FlexItem>
+                      </Flex>
+                      <ErrorHelperText error={weekDayError} />
+                    </>
+                  )}
+                </FieldArray>
               )}
-            </FieldArray>
+            </>
           )}
         </FormGroupWithHelperText>
       </StackItem>

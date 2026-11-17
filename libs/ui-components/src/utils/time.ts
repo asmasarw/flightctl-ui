@@ -215,11 +215,7 @@ export const cronToStructuredSchedule = (
 // Converts structured schedule form to cron expression.
 // Thin wrapper over getUpdateCronExpression for naming symmetry.
 // Used when toggling advanced mode ON to seed the cron field.
-export const structuredToCron = (
-  startsAt: string,
-  scheduleMode: UpdateScheduleMode,
-  weekDays: boolean[],
-): string => {
+export const structuredToCron = (startsAt: string, scheduleMode: UpdateScheduleMode, weekDays: boolean[]): string => {
   return getUpdateCronExpression(startsAt, scheduleMode, weekDays);
 };
 
@@ -281,6 +277,28 @@ export const getScheduleUpdateText = (schedule: UpdateScheduleDisplayFields, t: 
     return t('{{ schedule }}, grace {{ duration }}', {
       schedule: scheduleText,
       duration: schedule.startGraceDuration,
+    });
+  }
+
+  return scheduleText;
+};
+
+// Review display for a block edited as a raw cron expression (advanced mode).
+// Keeps the same timezone and grace-duration suffix handling as getScheduleUpdateText,
+// but shows the raw cron instead of the structured "Daily/Weekly…" text.
+export const getAdvancedScheduleUpdateText = (
+  cron: string,
+  timeZone: string | undefined,
+  startGraceDuration: string | undefined,
+  t: TFunction,
+): string => {
+  const tz = !timeZone || timeZone === localDeviceTimezone ? t("device's local timezone") : timeZone;
+  const scheduleText = t('Cron: {{ cron }} ({{ timeZone }})', { cron, timeZone: tz });
+
+  if (startGraceDuration && startGraceDuration !== '0s') {
+    return t('{{ schedule }}, grace {{ duration }}', {
+      schedule: scheduleText,
+      duration: startGraceDuration,
     });
   }
 
