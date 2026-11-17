@@ -188,6 +188,41 @@ export const getUpdateCronExpression = (startTime: string, scheduleMode: UpdateS
   return `${minutes} ${hours} * * ${weekDayVals.join(',')}`;
 };
 
+// Converts a representable cron expression to structured schedule form.
+// Used when toggling advanced mode OFF.
+export const cronToStructuredSchedule = (
+  cron: string,
+  startGraceDuration?: string,
+): {
+  startsAt: string;
+  endsAt: string;
+  weekDays: boolean[];
+  scheduleMode: UpdateScheduleMode;
+} => {
+  const startsAt = getTime(cron);
+  const { allSelected, selectedDays } = getWeekDays(cron);
+  const endsAt = getEndTime(startsAt, startGraceDuration);
+  const scheduleMode = allSelected ? UpdateScheduleMode.Daily : UpdateScheduleMode.Weekly;
+
+  return {
+    startsAt,
+    endsAt,
+    weekDays: selectedDays,
+    scheduleMode,
+  };
+};
+
+// Converts structured schedule form to cron expression.
+// Thin wrapper over getUpdateCronExpression for naming symmetry.
+// Used when toggling advanced mode ON to seed the cron field.
+export const structuredToCron = (
+  startsAt: string,
+  scheduleMode: UpdateScheduleMode,
+  weekDays: boolean[],
+): string => {
+  return getUpdateCronExpression(startsAt, scheduleMode, weekDays);
+};
+
 export const schedulesAreEqual = (a: UpdateSchedule | undefined, b: UpdateSchedule | undefined) => {
   if (!a && !b) {
     return true;
