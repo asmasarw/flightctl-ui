@@ -24,9 +24,8 @@ const TPM_CHALLENGE_REQUIRED_REASON = 'TPMChallengeRequired';
 export const getEnrollmentRequestsStatusItems = (t: TFunction): StatusItem<EnrollmentRequestStatus>[] => [
   {
     id: EnrollmentRequestStatus.Pending,
-    label: t('Pending approval'),
-    level: 'info',
-    customIcon: PauseCircleIcon,
+    label: t('Needs review'),
+    level: 'warning',
   },
   {
     id: EnrollmentRequestStatus.Approved,
@@ -35,8 +34,8 @@ export const getEnrollmentRequestsStatusItems = (t: TFunction): StatusItem<Enrol
   },
   {
     id: EnrollmentRequestStatus.Denied,
-    label: t('Denied'),
-    level: 'warning',
+    label: t('Rejected'),
+    level: 'danger',
   },
   {
     id: EnrollmentRequestStatus.Unknown,

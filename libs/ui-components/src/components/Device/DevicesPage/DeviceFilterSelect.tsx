@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Grid, GridItem, SelectList, SelectOption } from '@patternfly/react-core';
+import { SelectList, SelectOption } from '@patternfly/react-core';
 import { type TFunction } from 'i18next';
 
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -10,6 +10,8 @@ import { type DeviceSummaryStatus, FilterSearchParams, getDeviceStatusItems } fr
 import { type StatusItem } from '../../../utils/status/common';
 import { getApplicationSummaryStatusItems } from '../../../utils/status/applications';
 import { getSystemUpdateStatusItems } from '../../../utils/status/system';
+
+import './DeviceToolbarFilters.css';
 
 export const getStatusItem = (
   t: TFunction,
@@ -38,18 +40,26 @@ export const getStatusItem = (
 };
 
 type DeviceStatusFilterProps = {
+  reviewOnly: boolean;
+  setReviewOnly: (enabled: boolean) => void;
   activeStatuses: FilterStatusMap;
   updateStatus: UpdateStatus;
   isFilterUpdating: boolean;
 };
 
-const DeviceStatusFilter = ({ activeStatuses, updateStatus, isFilterUpdating }: DeviceStatusFilterProps) => {
+const DeviceStatusFilter = ({
+  activeStatuses,
+  updateStatus,
+  isFilterUpdating,
+  reviewOnly,
+  setReviewOnly,
+}: DeviceStatusFilterProps) => {
   const { t } = useTranslation();
 
   const selectedFilters = Object.values(activeStatuses).reduce((acc, curr) => {
     acc += curr.length;
     return acc;
-  }, 0);
+  }, Number(reviewOnly));
 
   return (
     <FilterSelect
@@ -57,31 +67,37 @@ const DeviceStatusFilter = ({ activeStatuses, updateStatus, isFilterUpdating }: 
       placeholder={t('Filter by status')}
       isFilterUpdating={isFilterUpdating}
     >
-      <SelectList>
-        <Grid hasGutter>
-          {Object.keys(activeStatuses).map((k) => {
-            const key = k as keyof FilterStatusMap;
-            const { title, items } = getStatusItem(t, key);
-            const currentItems = activeStatuses[key] as unknown as DeviceSummaryStatus[];
-            return (
-              <GridItem key={key} span={4}>
-                <FilterSelectGroup label={title}>
-                  {items.map((statusItem) => (
-                    <SelectOption
-                      onClick={() => updateStatus(key, statusItem.id)}
-                      key={statusItem.id}
-                      hasCheckbox
-                      value={statusItem.id}
-                      isSelected={currentItems.includes(statusItem.id)}
-                    >
-                      <StatusDisplay item={statusItem} />
-                    </SelectOption>
-                  ))}
-                </FilterSelectGroup>
-              </GridItem>
-            );
-          })}
-        </Grid>
+      <SelectList className="fctl-device-status-filter__groups">
+        {Object.keys(activeStatuses).map((k) => {
+          const key = k as keyof FilterStatusMap;
+          const { title, items } = getStatusItem(t, key);
+          const currentItems = activeStatuses[key] as unknown as DeviceSummaryStatus[];
+          return (
+            <FilterSelectGroup key={key} label={title}>
+              {items.map((statusItem) => (
+                <SelectOption
+                  onClick={() => updateStatus(key, statusItem.id)}
+                  key={statusItem.id}
+                  hasCheckbox
+                  value={statusItem.id}
+                  isSelected={currentItems.includes(statusItem.id)}
+                >
+                  <StatusDisplay item={statusItem} />
+                </SelectOption>
+              ))}
+            </FilterSelectGroup>
+          );
+        })}
+        <FilterSelectGroup label={t('Onboarding')}>
+          <SelectOption
+            hasCheckbox
+            value="onboarding-review-needed"
+            isSelected={reviewOnly}
+            onClick={() => setReviewOnly(!reviewOnly)}
+          >
+            <StatusDisplay item={{ label: t('Flagged for revoked certificate'), level: 'warning' }} />
+          </SelectOption>
+        </FilterSelectGroup>
       </SelectList>
     </FilterSelect>
   );

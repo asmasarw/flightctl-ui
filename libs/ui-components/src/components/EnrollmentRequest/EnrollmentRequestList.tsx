@@ -44,6 +44,8 @@ export const getEnrollmentRequestTableColumns = (t: TFunction): ApiTableColumn[]
 type EnrollmentRequestListProps = {
   refetchDevices?: VoidFunction;
   isStandalone?: boolean;
+  /** When rendered inside a tab, omit the "Devices pending approval" page header. */
+  hidePageHeader?: boolean;
 };
 
 const enrollmentRequestListPermissions = [
@@ -51,7 +53,7 @@ const enrollmentRequestListPermissions = [
   { kind: RESOURCE.ENROLLMENT_REQUEST, verb: VERB.DELETE },
 ];
 
-const EnrollmentRequestList = ({ refetchDevices, isStandalone }: EnrollmentRequestListProps) => {
+const EnrollmentRequestList = ({ refetchDevices, isStandalone, hidePageHeader }: EnrollmentRequestListProps) => {
   const { t } = useTranslation();
   const { checkPermissions } = usePermissionsContext();
   const [canApprove, canDelete] = checkPermissions(enrollmentRequestListPermissions);
@@ -83,13 +85,101 @@ const EnrollmentRequestList = ({ refetchDevices, isStandalone }: EnrollmentReque
 
   const isInitialUnfilteredLoad = !search && itemCount === 0 && isLoading;
 
-  // In non-standalone mode, hide the entire component when the unfiltered list is empty.
+  // In non-standalone mode (and when not embedded in a tab), hide the entire component when the
+  // unfiltered list is empty.
   const isLastUnfilteredListEmpty = !search && itemCount === 0 && !isLoading;
-  if (!isStandalone && isLastUnfilteredListEmpty) {
+  if (!isStandalone && !hidePageHeader && isLastUnfilteredListEmpty) {
     return null;
   }
 
   const currentEnrollmentRequest = pendingEnrollments.find((er) => er.metadata.name === approvingErId);
+
+  const content = (
+    <ListPageBody error={error} loading={isInitialUnfilteredLoad} loadingTestId="pending-enrollment-requests-loading">
+      <EnrollmentRequestTableToolbar search={search} setSearch={setSearch} enrollments={pendingEnrollments}>
+        {(canApprove || canDelete) && (
+          <ToolbarItem>
+            <TableActions isDisabled={!hasSelectedRows}>
+              <SelectList>
+                {canApprove && (
+                  <SelectOption onClick={() => setIsMassApproveModalOpen(true)}>{t('Approve')}</SelectOption>
+                )}
+                {canDelete && <SelectOption onClick={() => setIsMassDeleteModalOpen(true)}>{t('Delete')}</SelectOption>}
+              </SelectList>
+            </TableActions>
+          </ToolbarItem>
+        )}
+      </EnrollmentRequestTableToolbar>
+      <Table
+        aria-label={t('Table for devices pending approval')}
+        loading={!!isStandalone && isInitialUnfilteredLoad}
+        columns={enrollmentColumns}
+        emptyData={itemCount === 0}
+        clearFilters={() => setSearch('')}
+        hasFilters={!!search}
+        isAllSelected={isAllSelected}
+        onSelectAll={setAllSelected}
+      >
+        <Tbody>
+          {pendingEnrollments.map((er, index) => (
+            <EnrollmentRequestTableRow
+              key={er.metadata.name || ''}
+              er={er}
+              deleteAction={deleteAction}
+              onRowSelect={onRowSelect}
+              isRowSelected={isRowSelected}
+              rowIndex={index}
+              onApprove={() => {
+                setApprovingErId(er.metadata.name as string);
+              }}
+              canApprove={canApprove}
+              canDelete={canDelete}
+            />
+          ))}
+        </Tbody>
+      </Table>
+      <TablePagination pagination={pagination} isUpdating={isLoading} />
+      {isStandalone && itemCount === 0 && !isLoading && <EnrollmentRequestEmptyState />}
+      {deleteModal}
+      {currentEnrollmentRequest && (
+        <ApproveDeviceModal
+          enrollmentRequest={currentEnrollmentRequest}
+          onClose={(updateList) => {
+            setApprovingErId(undefined);
+            if (updateList) {
+              refetchWithDevices();
+            }
+          }}
+        />
+      )}
+      {isMassDeleteModalOpen && (
+        <MassDeleteDeviceModal
+          onClose={() => setIsMassDeleteModalOpen(false)}
+          resources={pendingEnrollments.filter(isRowSelected)}
+          onDeleteSuccess={() => {
+            setIsMassDeleteModalOpen(false);
+            setAllSelected(false);
+            refetch();
+          }}
+        />
+      )}
+      {isMassApproveModalOpen && (
+        <MassApproveDeviceModal
+          onClose={() => setIsMassApproveModalOpen(false)}
+          pendingEnrollments={pendingEnrollments.filter(isRowSelected)}
+          onApproveSuccess={() => {
+            setAllSelected(false);
+            setIsMassApproveModalOpen(false);
+            refetchWithDevices();
+          }}
+        />
+      )}
+    </ListPageBody>
+  );
+
+  if (hidePageHeader) {
+    return <div data-testid="pending-enrollment-requests-section">{content}</div>;
+  }
 
   return (
     <ListPage
@@ -98,88 +188,7 @@ const EnrollmentRequestList = ({ refetchDevices, isStandalone }: EnrollmentReque
       description={t('Review and approve devices requesting to join your environment.')}
       testId="pending-enrollment-requests-section"
     >
-      <ListPageBody error={error} loading={isInitialUnfilteredLoad} loadingTestId="pending-enrollment-requests-loading">
-        <EnrollmentRequestTableToolbar search={search} setSearch={setSearch} enrollments={pendingEnrollments}>
-          {(canApprove || canDelete) && (
-            <ToolbarItem>
-              <TableActions isDisabled={!hasSelectedRows}>
-                <SelectList>
-                  {canApprove && (
-                    <SelectOption onClick={() => setIsMassApproveModalOpen(true)}>{t('Approve')}</SelectOption>
-                  )}
-                  {canDelete && (
-                    <SelectOption onClick={() => setIsMassDeleteModalOpen(true)}>{t('Delete')}</SelectOption>
-                  )}
-                </SelectList>
-              </TableActions>
-            </ToolbarItem>
-          )}
-        </EnrollmentRequestTableToolbar>
-        <Table
-          aria-label={t('Table for devices pending approval')}
-          loading={!!isStandalone && isInitialUnfilteredLoad}
-          columns={enrollmentColumns}
-          emptyData={itemCount === 0}
-          clearFilters={() => setSearch('')}
-          hasFilters={!!search}
-          isAllSelected={isAllSelected}
-          onSelectAll={setAllSelected}
-        >
-          <Tbody>
-            {pendingEnrollments.map((er, index) => (
-              <EnrollmentRequestTableRow
-                key={er.metadata.name || ''}
-                er={er}
-                deleteAction={deleteAction}
-                onRowSelect={onRowSelect}
-                isRowSelected={isRowSelected}
-                rowIndex={index}
-                onApprove={() => {
-                  setApprovingErId(er.metadata.name as string);
-                }}
-                canApprove={canApprove}
-                canDelete={canDelete}
-              />
-            ))}
-          </Tbody>
-        </Table>
-        <TablePagination pagination={pagination} isUpdating={isLoading} />
-        {isStandalone && itemCount === 0 && !isLoading && <EnrollmentRequestEmptyState />}
-        {deleteModal}
-        {currentEnrollmentRequest && (
-          <ApproveDeviceModal
-            enrollmentRequest={currentEnrollmentRequest}
-            onClose={(updateList) => {
-              setApprovingErId(undefined);
-              if (updateList) {
-                refetchWithDevices();
-              }
-            }}
-          />
-        )}
-        {isMassDeleteModalOpen && (
-          <MassDeleteDeviceModal
-            onClose={() => setIsMassDeleteModalOpen(false)}
-            resources={pendingEnrollments.filter(isRowSelected)}
-            onDeleteSuccess={() => {
-              setIsMassDeleteModalOpen(false);
-              setAllSelected(false);
-              refetch();
-            }}
-          />
-        )}
-        {isMassApproveModalOpen && (
-          <MassApproveDeviceModal
-            onClose={() => setIsMassApproveModalOpen(false)}
-            pendingEnrollments={pendingEnrollments.filter(isRowSelected)}
-            onApproveSuccess={() => {
-              setAllSelected(false);
-              setIsMassApproveModalOpen(false);
-              refetchWithDevices();
-            }}
-          />
-        )}
-      </ListPageBody>
+      {content}
     </ListPage>
   );
 };

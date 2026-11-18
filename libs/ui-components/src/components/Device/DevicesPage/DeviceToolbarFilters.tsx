@@ -7,8 +7,11 @@ import {
   HelperText,
   HelperTextItem,
   Icon,
+  MenuSearch,
+  MenuSearchInput,
   MenuToggle,
   type MenuToggleElement,
+  SearchInput,
   Select,
   SelectGroup,
   SelectList,
@@ -34,7 +37,6 @@ import { commonQueries as queries } from '../../../utils/query';
 import { MAX_TOTAL_SEARCH_RESULTS, getEmptyFleetSearch, getSearchResultsCount } from '../../../utils/search';
 import { labelToString, stringToLabel } from '../../../utils/labels';
 import {
-  DEVICE_TEXT_FILTER_KEYS,
   type DeviceFilterTypes,
   type DeviceTextFilterKey,
   FilterSearchParams,
@@ -307,7 +309,66 @@ const LabelFleetSelector = ({ selectedFleetNames, selectedLabels, onSelect, plac
   );
 };
 
+export type DeviceCertificateFilter = {
+  name?: string;
+  options?: string[];
+  select: (name?: string) => void;
+};
+
+const CertificatePicker = ({ name, options = [], select }: DeviceCertificateFilter) => {
+  const { t } = useTranslation();
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const matches = options.filter((option) => option.toLowerCase().includes(query.trim().toLowerCase()));
+  return (
+    <Select
+      isOpen={open}
+      selected={name}
+      onOpenChange={setOpen}
+      onSelect={(_event, value) => {
+        select(String(value));
+        setOpen(false);
+      }}
+      toggle={(ref) => (
+        <MenuToggle
+          ref={ref}
+          isExpanded={open}
+          onClick={() => {
+            setQuery('');
+            setOpen(!open);
+          }}
+        >
+          {name || t('Select a certificate')}
+        </MenuToggle>
+      )}
+    >
+      <MenuSearch>
+        <MenuSearchInput>
+          <SearchInput
+            aria-label={t('Search certificates')}
+            placeholder={t('Search certificates')}
+            value={query}
+            onChange={(_event, value) => setQuery(value)}
+          />
+        </MenuSearchInput>
+      </MenuSearch>
+      <SelectList>
+        {matches.length ? (
+          matches.map((option) => (
+            <SelectOption key={option} value={option}>
+              {option}
+            </SelectOption>
+          ))
+        ) : (
+          <SelectOption isDisabled>{t('No certificates found')}</SelectOption>
+        )}
+      </SelectList>
+    </Select>
+  );
+};
+
 type DeviceToolbarFilterProps = {
+  certificateFilter?: DeviceCertificateFilter;
   selectedFleetNames: string[];
   setSelectedFleets: (ownerFleets: string[]) => void;
   selectedLabels: FlightCtlLabel[];
@@ -321,6 +382,7 @@ const DeviceToolbarFilter = ({
   setSelectedFleets,
   selectedLabels,
   setSelectedLabels,
+  certificateFilter,
   textFilters = {},
   setTextFilter,
 }: DeviceToolbarFilterProps) => {
@@ -351,18 +413,28 @@ const DeviceToolbarFilter = ({
     [setTextFilter, t],
   );
 
-  const urlValueForTextMode =
-    selectedSearchType !== FilterSearchParams.Label ? textFilters[selectedSearchType] : undefined;
+  const textMode =
+    selectedSearchType === FilterSearchParams.NameOrAlias || selectedSearchType === FilterSearchParams.CveId
+      ? selectedSearchType
+      : undefined;
+  const urlValueForTextMode = textMode ? textFilters[textMode] : undefined;
+  React.useEffect(() => {
+    if (certificateFilter?.name) setSelectedSearchType(FilterSearchParams.Certificate);
+  }, [certificateFilter?.name]);
+  React.useEffect(() => {
+    if (!certificateFilter?.options && selectedSearchType === FilterSearchParams.Certificate)
+      setSelectedSearchType(FilterSearchParams.Label);
+  }, [certificateFilter?.options, selectedSearchType]);
 
   React.useEffect(() => {
-    if (!setTextFilter || selectedSearchType === FilterSearchParams.Label) {
+    if (!setTextFilter || !textMode) {
       return undefined;
     }
-    debouncedSetTextFilter(selectedSearchType, typingText);
+    debouncedSetTextFilter(textMode, typingText);
     return () => {
       debouncedSetTextFilter.cancel();
     };
-  }, [typingText, selectedSearchType, setTextFilter, debouncedSetTextFilter]);
+  }, [typingText, textMode, setTextFilter, debouncedSetTextFilter]);
 
   React.useEffect(() => {
     if (selectedSearchType === FilterSearchParams.Label) {
@@ -385,8 +457,9 @@ const DeviceToolbarFilter = ({
   ) => {
     const sel = selection as DeviceFilterTypes;
     setSelectedSearchType(sel);
+    setFreeTextFilterError(undefined);
     setIsSearchTypeExpanded(false);
-    if (sel === FilterSearchParams.Label) {
+    if (sel === FilterSearchParams.Label || sel === FilterSearchParams.Certificate) {
       setTypingText('');
     } else {
       setTypingText(textFilters[sel] ?? '');
@@ -444,7 +517,11 @@ const DeviceToolbarFilter = ({
                   <SelectOption id={FilterSearchParams.Label} value={FilterSearchParams.Label}>
                     {t('Labels and fleets')}
                   </SelectOption>
-                  {DEVICE_TEXT_FILTER_KEYS.map((key) => (
+                  {[
+                    FilterSearchParams.NameOrAlias,
+                    ...(certificateFilter?.options ? [FilterSearchParams.Certificate] : []),
+                    FilterSearchParams.CveId,
+                  ].map((key: DeviceFilterTypes) => (
                     <SelectOption key={key} id={key} value={key}>
                       {getDeviceFilterLabel(t, key)}
                     </SelectOption>
@@ -454,7 +531,9 @@ const DeviceToolbarFilter = ({
             )}
           </FlexItem>
           <FlexItem>
-            {setTextFilter && selectedSearchType !== FilterSearchParams.Label ? (
+            {selectedSearchType === FilterSearchParams.Certificate && certificateFilter?.options ? (
+              <CertificatePicker {...certificateFilter} />
+            ) : setTextFilter && textMode ? (
               <TableTextSearch value={typingText} setValue={setTypingText} />
             ) : (
               <LabelFleetSelector

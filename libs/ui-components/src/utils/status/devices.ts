@@ -32,6 +32,8 @@ export enum FilterSearchParams {
   UpdatedStatus = 'updSt',
   Label = 'label',
   NameOrAlias = 'nameOrAlias',
+  Certificate = 'certificate',
+  OnboardingReview = 'onboardingReview',
   CveId = 'cveId',
   // Device features
   OsMode = 'osMode',
@@ -199,7 +201,7 @@ export const deviceFeatureFiltersToSearchParams = (filters: DeviceFeatureFilter[
 export const DEVICE_TEXT_FILTER_KEYS = [FilterSearchParams.NameOrAlias, FilterSearchParams.CveId];
 
 export type DeviceTextFilterKey = (typeof DEVICE_TEXT_FILTER_KEYS)[number];
-export type DeviceFilterTypes = DeviceTextFilterKey | FilterSearchParams.Label;
+export type DeviceFilterTypes = DeviceTextFilterKey | FilterSearchParams.Label | FilterSearchParams.Certificate;
 const CVE_ID_FILTER_PATTERN = /^CVE-\d{4}-\d{4,}$/i;
 
 // Attempting to search for an invalid CVE ID will result in a 400 error from the backend.
@@ -312,6 +314,8 @@ export const getDeviceFilterLabel = (t: TFunction, key: DeviceFilterTypes) => {
       return t('Name and alias');
     case FilterSearchParams.CveId:
       return t('CVE ID');
+    case FilterSearchParams.Certificate:
+      return t('Certificate');
     case FilterSearchParams.Label:
       return t('Labels and fleets');
     default:

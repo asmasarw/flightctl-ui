@@ -1,0 +1,56 @@
+.enrollment-auto-approval__tab-content {
+  padding-top: var(--pf-t--global--spacer--lg);
+}
+
+.enrollment-auto-approval__intro {
+  max-width: 52rem;
+}
+
+.enrollment-auto-approval__form {
+  max-width: 50rem;
+}
+
+.enrollment-auto-approval__data-table tbody > tr > td {
+  vertical-align: middle;
+}
+
+.enrollment-auto-approval__tab-description {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--pf-t--global--spacer--lg);
+  margin-bottom: var(--pf-t--global--spacer--lg);
+}
+
+.enrollment-auto-approval__tab-description > div:first-child {
+  min-width: 0;
+}
+
+.enrollment-auto-approval__request-toolbar .pf-v6-c-search-input {
+  min-width: 240px;
+}
+
+.enrollment-auto-approval__detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--pf-t--global--spacer--lg);
+}
+
+.enrollment-auto-approval__secondary-label {
+  margin-inline-start: var(--pf-t--global--spacer--sm);
+}
+
+@media (max-width: 768px) {
+  .enrollment-auto-approval__tab-description {
+    flex-direction: column;
+  }
+
+  .enrollment-auto-approval__detail-header {
+    flex-direction: column;
+  }
+
+  .enrollment-auto-approval__request-toolbar .pf-v6-c-search-input {
+    width: 100%;
+  }
+}

@@ -24,10 +24,13 @@ import { labelToString } from '../../../utils/labels';
 import DeviceStatusFilter, { getStatusItem } from './DeviceFilterSelect';
 import type { FilterStatusMap, UpdateStatus } from './types';
 import type { FlightCtlLabel } from '../../../types/extraTypes';
-import DeviceTableToolbarFilters from './DeviceToolbarFilters';
+import DeviceTableToolbarFilters, { type DeviceCertificateFilter } from './DeviceToolbarFilters';
 import DeviceFeatureFilters from './DeviceFeatureFilters';
 
 type DeviceTableToolbarProps = {
+  certificateFilter: DeviceCertificateFilter;
+  showEnrollmentReviewOnly: boolean;
+  setShowEnrollmentReviewOnly: (enabled: boolean) => void;
   textFilters: Partial<Record<DeviceTextFilterKey, string>>;
   setTextFilter: (key: DeviceTextFilterKey, value: string) => void;
   clearTextFilters: VoidFunction;
@@ -59,6 +62,8 @@ const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarPro
     selectedLabels,
     setSelectedLabels,
     isFilterUpdating,
+    showEnrollmentReviewOnly,
+    setShowEnrollmentReviewOnly,
   } = rest;
 
   const updateStatus: UpdateStatus = (statusType, status) => {
@@ -91,6 +96,8 @@ const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarPro
           <ToolbarGroup>
             <ToolbarItem>
               <DeviceStatusFilter
+                reviewOnly={showEnrollmentReviewOnly}
+                setReviewOnly={setShowEnrollmentReviewOnly}
                 activeStatuses={activeStatuses}
                 updateStatus={updateStatus}
                 isFilterUpdating={isFilterUpdating}
@@ -106,6 +113,7 @@ const DeviceTableToolbar: React.FC<React.PropsWithChildren<DeviceTableToolbarPro
             </ToolbarItem>
             <ToolbarItem style={{ alignItems: 'flex-start' }}>
               <DeviceTableToolbarFilters
+                certificateFilter={rest.certificateFilter}
                 selectedLabels={selectedLabels}
                 selectedFleetNames={ownerFleets}
                 setSelectedLabels={setSelectedLabels}
@@ -128,6 +136,7 @@ type DeviceToolbarChipsProps = Omit<DeviceTableToolbarProps, 'setActiveStatuses'
 };
 
 const DeviceToolbarChips = ({
+  certificateFilter,
   activeStatuses,
   updateStatus,
   textFilters,
@@ -142,6 +151,8 @@ const DeviceToolbarChips = ({
   setSelectedFeatures,
   selectedLabels,
   setSelectedLabels,
+  showEnrollmentReviewOnly,
+  setShowEnrollmentReviewOnly,
 }: DeviceToolbarChipsProps) => {
   const { t } = useTranslation();
   const statusKeys = Object.keys(activeStatuses).filter((k) => !!activeStatuses[k as keyof FilterStatusMap].length);
@@ -152,12 +163,14 @@ const DeviceToolbarChips = ({
   );
 
   const hasAnyFilter =
+    !!certificateFilter.name ||
     !!statusKeys.length ||
     !!ownerFleets.length ||
     onlyFleetless ||
     !!activeTextFilterKeys.length ||
     !!selectedLabels.length ||
-    selectedFeaturesCount > 0;
+    selectedFeaturesCount > 0 ||
+    showEnrollmentReviewOnly;
 
   return (
     <Split hasGutter>
@@ -196,6 +209,19 @@ const DeviceToolbarChips = ({
           <LabelGroup categoryName={t('Fleet')} isClosable onClick={() => setOnlyFleetless(false)}>
             <Label variant="outline" onClose={() => setOnlyFleetless(false)}>
               {t('N/A')}
+            </Label>
+          </LabelGroup>
+        </SplitItem>
+      )}
+      {certificateFilter.name && (
+        <SplitItem>
+          <LabelGroup categoryName={t('Certificate')}>
+            <Label
+              variant="outline"
+              closeBtnAriaLabel={t('Clear certificate filter')}
+              onClose={() => certificateFilter.select()}
+            >
+              {certificateFilter.name}
             </Label>
           </LabelGroup>
         </SplitItem>
@@ -249,17 +275,32 @@ const DeviceToolbarChips = ({
           </LabelGroup>
         </SplitItem>
       )}
+      {showEnrollmentReviewOnly && (
+        <SplitItem>
+          <LabelGroup categoryName={t('Onboarding')}>
+            <Label
+              variant="outline"
+              closeBtnAriaLabel={t('Clear review filter')}
+              onClose={() => setShowEnrollmentReviewOnly(false)}
+            >
+              {t('Flagged for revoked certificate')}
+            </Label>
+          </LabelGroup>
+        </SplitItem>
+      )}
       {hasAnyFilter && (
         <SplitItem>
           <Button
             variant="link"
             onClick={() => {
+              certificateFilter.select();
               updateStatus();
               setOwnerFleets([]);
               setOnlyFleetless(false);
               clearTextFilters();
               setSelectedLabels([]);
               setSelectedFeatures([]);
+              setShowEnrollmentReviewOnly(false);
             }}
           >
             {t('Clear all filters')}

@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Button, Switch, ToolbarItem } from '@patternfly/react-core';
+import { Button, EmptyState, EmptyStateBody, EmptyStateFooter, Switch, ToolbarItem } from '@patternfly/react-core';
+import SearchIcon from '@patternfly/react-icons/dist/js/icons/search-icon';
 import { Tbody } from '@patternfly/react-table';
 import { type TFunction } from 'react-i18next';
 
@@ -35,8 +36,12 @@ import DeviceTableToolbar from './DeviceTableToolbar';
 import EnrolledDeviceTableRow from './EnrolledDeviceTableRow';
 import { type DeviceFeatureFilter, type DeviceTextFilterKey, FilterSearchParams } from '../../../utils/status/devices';
 import { GlobalSystemRestoreBanners } from '../../SystemRestore/SystemRestoreBanners';
+import { type DeviceCertificateFilter } from './DeviceToolbarFilters';
 
 interface EnrolledDeviceTableProps {
+  certificateFilter: DeviceCertificateFilter;
+  showEnrollmentReviewOnly: boolean;
+  setShowEnrollmentReviewOnly: (enabled: boolean) => void;
   devices: Array<Device>;
   ownerFleets: string[];
   onlyFleetless: boolean;
@@ -57,7 +62,6 @@ interface EnrolledDeviceTableProps {
   isFilterUpdating: boolean;
   pagination: Pick<PaginationDetails<DeviceList>, 'currentPage' | 'setCurrentPage' | 'itemCount'>;
   refetchDevices: VoidFunction;
-  // getSortParams: (columnIndex: number) => ThProps['sort'];
 }
 
 const getDeviceTableColumns = (t: TFunction) => [
@@ -97,6 +101,9 @@ const enrolledDevicesPermissions = [
 ];
 
 const EnrolledDevicesTable = ({
+  certificateFilter,
+  showEnrollmentReviewOnly,
+  setShowEnrollmentReviewOnly,
   devices,
   textFilters,
   setTextFilter,
@@ -142,6 +149,8 @@ const EnrolledDevicesTable = ({
   const [canEdit, canDecommission, canResume] = checkPermissions(enrolledDevicesPermissions);
 
   const clearAllFilters = () => {
+    certificateFilter.select();
+    setShowEnrollmentReviewOnly(false);
     if (hasFiltersEnabled) {
       setActiveStatuses({
         [FilterSearchParams.AppStatus]: [],
@@ -161,6 +170,9 @@ const EnrolledDevicesTable = ({
       <GlobalSystemRestoreBanners onResumeComplete={refetchDevices} />
 
       <DeviceTableToolbar
+        certificateFilter={certificateFilter}
+        showEnrollmentReviewOnly={showEnrollmentReviewOnly}
+        setShowEnrollmentReviewOnly={setShowEnrollmentReviewOnly}
         textFilters={textFilters}
         setTextFilter={setTextFilter}
         clearTextFilters={clearTextFilters}
@@ -209,37 +221,55 @@ const EnrolledDevicesTable = ({
           />
         </ToolbarItem>
       </DeviceTableToolbar>
-      <Table
-        aria-label={t('Enrolled devices table')}
-        loading={isFilterUpdating}
-        columns={deviceColumns}
-        hasFilters={hasFiltersEnabled}
-        clearFilters={clearAllFilters}
-        emptyData={devices.length === 0}
-        isAllSelected={isAllSelected}
-        onSelectAll={setAllSelected}
-        data-testid="enrolled-devices-table"
-      >
-        <Tbody>
-          {devices.map((device, index) => (
-            <EnrolledDeviceTableRow
-              key={device.metadata.name || ''}
-              device={device}
-              onRowSelect={onRowSelect}
-              isRowSelected={isRowSelected}
-              rowIndex={index}
-              canEdit={canEdit}
-              canDecommission={canDecommission}
-              decommissionAction={decommissionDeviceAction}
-              canResume={canResume}
-              resumeAction={resumeDeviceAction}
-              deviceColumns={deviceColumns}
-            />
-          ))}
-        </Tbody>
-      </Table>
+      {showEnrollmentReviewOnly && !devices.length && !isFilterUpdating ? (
+        <EmptyState
+          titleText={t('No devices need onboarding review')}
+          headingLevel="h2"
+          variant="full"
+          icon={SearchIcon}
+        >
+          {(certificateFilter.name || hasFiltersEnabled) && (
+            <EmptyStateBody>{t('No devices match the review filter and your other selected filters.')}</EmptyStateBody>
+          )}
+          <EmptyStateFooter>
+            <Button variant="link" onClick={() => setShowEnrollmentReviewOnly(false)}>
+              {t('Clear review filter')}
+            </Button>
+          </EmptyStateFooter>
+        </EmptyState>
+      ) : (
+        <Table
+          aria-label={t('Enrolled devices table')}
+          loading={isFilterUpdating}
+          columns={deviceColumns}
+          hasFilters={hasFiltersEnabled || showEnrollmentReviewOnly || !!certificateFilter.name}
+          clearFilters={clearAllFilters}
+          emptyData={devices.length === 0}
+          isAllSelected={isAllSelected}
+          onSelectAll={setAllSelected}
+          data-testid="enrolled-devices-table"
+        >
+          <Tbody>
+            {devices.map((device, index) => (
+              <EnrolledDeviceTableRow
+                key={device.metadata.name || ''}
+                device={device}
+                onRowSelect={onRowSelect}
+                isRowSelected={isRowSelected}
+                rowIndex={index}
+                canEdit={canEdit}
+                canDecommission={canDecommission}
+                decommissionAction={decommissionDeviceAction}
+                canResume={canResume}
+                resumeAction={resumeDeviceAction}
+                deviceColumns={deviceColumns}
+              />
+            ))}
+          </Tbody>
+        </Table>
+      )}
       <TablePagination isUpdating={isFilterUpdating} pagination={pagination} />
-      {!hasFiltersEnabled && devices.length === 0 && (
+      {!hasFiltersEnabled && !certificateFilter.name && !showEnrollmentReviewOnly && devices.length === 0 && (
         <EnrolledDevicesEmptyState onAddDevice={() => setAddDeviceModal(true)} />
       )}
       {decommissionDeviceModal || resumeDeviceModal}

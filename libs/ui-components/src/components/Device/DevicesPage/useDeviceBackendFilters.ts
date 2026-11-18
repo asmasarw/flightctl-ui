@@ -174,6 +174,32 @@ export const useDeviceBackendFilters = () => {
     updateSearchParams(getNewParams(paramsRef.current, buildTextFilterRemoval()));
   }, [updateSearchParams]);
 
+  const reviewOnly = searchParams.get(FilterSearchParams.OnboardingReview) === 'true';
+  const setReviewOnly = (enabled: boolean) =>
+    updateSearchParams(
+      getNewParams(paramsRef.current, { [FilterSearchParams.OnboardingReview]: enabled ? ['true'] : [] }),
+    );
+
+  const certificateName = searchParams.get(FilterSearchParams.Certificate) || undefined;
+  const setCertificateFilter = React.useCallback(
+    (name?: string, clearOtherFilters = false, needsReview = false) => {
+      const params = new URLSearchParams(paramsRef.current);
+      if (clearOtherFilters) {
+        DEVICE_FILTER_PARAM_KEYS.forEach((key) => params.delete(key));
+      }
+      if (needsReview) {
+        params.set(FilterSearchParams.OnboardingReview, 'true');
+      }
+      if (name) {
+        params.set(FilterSearchParams.Certificate, name);
+      } else {
+        params.delete(FilterSearchParams.Certificate);
+      }
+      updateSearchParams([...params.entries()]);
+    },
+    [updateSearchParams],
+  );
+
   const hasFiltersEnabled =
     !!selectedLabels.length ||
     !!ownerFleets.length ||
@@ -186,6 +212,10 @@ export const useDeviceBackendFilters = () => {
 
   return {
     filterKey,
+    reviewOnly,
+    setReviewOnly,
+    certificateName,
+    setCertificateFilter,
     textFilters,
     setTextFilter,
     clearTextFilters,

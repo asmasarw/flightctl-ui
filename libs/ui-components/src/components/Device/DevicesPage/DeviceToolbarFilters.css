@@ -2,6 +2,24 @@
   padding: 0.75rem;
 }
 
+.fctl-device-status-filter__groups {
+  display: grid;
+  align-items: start;
+  gap: var(--pf-t--global--spacer--sm);
+}
+
+@media (min-width: 36rem) {
+  .fctl-device-status-filter__groups {
+    grid-template-columns: repeat(2, max-content);
+  }
+}
+
+@media (min-width: 62rem) {
+  .fctl-device-status-filter__groups {
+    grid-template-columns: repeat(4, max-content);
+  }
+}
+
 .fctl-device-toolbar-filters__toggle .pf-v6-c-menu-toggle__icon {
   --pf-v6-c-menu-toggle--PaddingBlockStart: -0.5rem;
   margin-left: 0.5rem;
