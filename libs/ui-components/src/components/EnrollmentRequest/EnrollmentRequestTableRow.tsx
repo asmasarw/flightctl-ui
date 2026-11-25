@@ -6,9 +6,16 @@ import { type EnrollmentRequest } from '@flightctl/types';
 import { timeSinceText } from '../../utils/dates';
 import { type ListAction } from '../ListPage/types';
 import { useTranslation } from '../../hooks/useTranslation';
-import { ROUTE } from '../../hooks/useNavigate';
+import { useAppContext } from '../../hooks/useAppContext';
 import ResourceLink from '../common/ResourceLink';
 import { buildAllDropdownActions } from '../common/ActionsDropdownList';
+import EnrollmentRequestStatus from '../Status/EnrollmentRequestStatus';
+import {
+  EnrollmentRequestStatus as EnrollmentRequestStatusType,
+  getApprovalStatus,
+  getEnrollmentDecisionText,
+} from '../../utils/status/enrollmentRequest';
+import { buildOnboardingRequestSearchParams } from './DeviceOnboardingPanel';
 
 type EnrollmentRequestTableRow = {
   rowIndex: number;
@@ -32,15 +39,27 @@ const EnrollmentRequestTableRow: React.FC<EnrollmentRequestTableRow> = ({
   canDelete,
 }) => {
   const { t } = useTranslation();
+  const {
+    router: { useSearchParams },
+  } = useAppContext();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const erName = er.metadata.name as string;
   const erAlias = er.spec.labels?.alias;
+  const isPending = getApprovalStatus(er) === EnrollmentRequestStatusType.Pending;
+  const decisionText = getEnrollmentDecisionText(er);
+  const showApprove = canApprove && isPending;
+
+  const openRequestReview = () => {
+    setSearchParams(buildOnboardingRequestSearchParams(searchParams, erName), { replace: true });
+  };
 
   const approveEnrollment = () => {
     onApprove(erName);
   };
 
   const regularActions: IAction[] = [];
-  if (canApprove) {
+  if (showApprove) {
     regularActions.push({
       title: t('Approve'),
       onClick: approveEnrollment,
@@ -59,24 +78,30 @@ const EnrollmentRequestTableRow: React.FC<EnrollmentRequestTableRow> = ({
         }}
       />
       <Td dataLabel={t('Alias')}>
-        <ResourceLink id={erName} name={erAlias || t('Untitled')} routeLink={ROUTE.ENROLLMENT_REQUEST_DETAILS} />
+        <Button variant="link" isInline onClick={openRequestReview}>
+          {erAlias || t('Untitled')}
+        </Button>
       </Td>
       <Td dataLabel={t('Name')}>
         <ResourceLink id={erName} />
       </Td>
-      <Td dataLabel={t('Created')}>{timeSinceText(t, er.metadata.creationTimestamp)}</Td>
-      {canApprove && (
-        <Td dataLabel={t('Approve')}>
+      <Td dataLabel={t('Request status')}>
+        <EnrollmentRequestStatus er={er} />
+      </Td>
+      <Td dataLabel={t('Decision')}>{decisionText}</Td>
+      <Td dataLabel={t('Submitted')}>{timeSinceText(t, er.metadata.creationTimestamp)}</Td>
+      <Td dataLabel={t('Review request')}>
+        {isPending ? (
           <Button
             variant="link"
             isInline
-            onClick={approveEnrollment}
-            data-testid={`enrollment-request-approve-button-${rowIndex}`}
+            onClick={openRequestReview}
+            data-testid={`enrollment-request-review-button-${rowIndex}`}
           >
-            {t('Approve')}
+            {t('Review request')}
           </Button>
-        </Td>
-      )}
+        ) : null}
+      </Td>
       {!!actionItems.length && (
         <Td isActionCell data-testid={`enrollment-request-row-actions-${rowIndex}`}>
           <ActionsColumn items={actionItems} />

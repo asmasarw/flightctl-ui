@@ -53,9 +53,8 @@ describe('Enrollment requests approval', () => {
 
     devicesPage.enrollmentRequestSearchInput.type(FIRST_PENDING_ENROLLMENT_REQUEST_NAME);
     cy.wait('@all-enrollment-requests');
-    devicesPage.firstEnrollmentRequestDetailsLink
-      .should('have.attr', 'href')
-      .and('include', FIRST_PENDING_ENROLLMENT_REQUEST_NAME);
+    devicesPage.firstEnrollmentRequestDetailsLink.should('be.visible').click();
+    cy.url().should('include', `request=${FIRST_PENDING_ENROLLMENT_REQUEST_NAME}`);
   });
 
   it('Pending enrollment requests section remains visible while clearing an empty search result', () => {

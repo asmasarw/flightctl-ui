@@ -24,8 +24,8 @@ const TPM_CHALLENGE_REQUIRED_REASON = 'TPMChallengeRequired';
 export const getEnrollmentRequestsStatusItems = (t: TFunction): StatusItem<EnrollmentRequestStatus>[] => [
   {
     id: EnrollmentRequestStatus.Pending,
-    label: t('Pending approval'),
-    level: 'info',
+    label: t('Needs review'),
+    level: 'warning',
     customIcon: PauseCircleIcon,
   },
   {
@@ -35,8 +35,8 @@ export const getEnrollmentRequestsStatusItems = (t: TFunction): StatusItem<Enrol
   },
   {
     id: EnrollmentRequestStatus.Denied,
-    label: t('Denied'),
-    level: 'warning',
+    label: t('Rejected'),
+    level: 'danger',
   },
   {
     id: EnrollmentRequestStatus.Unknown,
@@ -44,6 +44,54 @@ export const getEnrollmentRequestsStatusItems = (t: TFunction): StatusItem<Enrol
     level: 'unknown',
   },
 ];
+
+const getApprovedCondition = (enrollmentRequest: EnrollmentRequest): Condition | undefined =>
+  enrollmentRequest.status?.conditions?.find((c) => c.type === ConditionType.EnrollmentRequestApproved);
+
+/** Human-readable decision detail from the Approved condition, when the API provides one. */
+export const getEnrollmentDecisionText = (enrollmentRequest: EnrollmentRequest): string => {
+  const condition = getApprovedCondition(enrollmentRequest);
+  return condition?.message || condition?.reason || '';
+};
+
+/**
+ * Builds a fieldSelector fragment for enrollment request approval status filters.
+ * Returns undefined when no status filter should be applied (none or all selectable statuses).
+ */
+export const getEnrollmentApprovalFieldSelector = (statuses: EnrollmentRequestStatus[]): string | undefined => {
+  const unique = [...new Set(statuses)].filter(
+    (status) =>
+      status === EnrollmentRequestStatus.Pending ||
+      status === EnrollmentRequestStatus.Approved ||
+      status === EnrollmentRequestStatus.Denied,
+  );
+
+  if (unique.length === 0 || unique.length === 3) {
+    return undefined;
+  }
+
+  const hasPending = unique.includes(EnrollmentRequestStatus.Pending);
+  const hasApproved = unique.includes(EnrollmentRequestStatus.Approved);
+  const hasDenied = unique.includes(EnrollmentRequestStatus.Denied);
+
+  if (hasPending && !hasApproved && !hasDenied) {
+    return '!status.approval.approved';
+  }
+  if (hasApproved && !hasPending && !hasDenied) {
+    return 'status.approval.approved=true';
+  }
+  if (hasDenied && !hasPending && !hasApproved) {
+    return 'status.approval.approved=false';
+  }
+  if (hasPending && hasDenied && !hasApproved) {
+    return '!status.approval.approved';
+  }
+  if (hasApproved && hasDenied && !hasPending) {
+    return 'status.approval.approved in (true,false)';
+  }
+
+  return undefined;
+};
 
 export const getTpmVerificationStatusItems = (t: TFunction): StatusItem<EnrollmentRequestTpmVerificationStatus>[] => [
   {
@@ -75,9 +123,7 @@ export const getTpmVerificationStatusItems = (t: TFunction): StatusItem<Enrollme
 ];
 
 export const getApprovalStatus = (enrollmentRequest: EnrollmentRequest): EnrollmentRequestStatus => {
-  const approvedCondition = enrollmentRequest.status?.conditions?.find(
-    (c) => c.type === ConditionType.EnrollmentRequestApproved,
-  );
+  const approvedCondition = getApprovedCondition(enrollmentRequest);
 
   switch (approvedCondition?.status) {
     case 'True':

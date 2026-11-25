@@ -8,7 +8,7 @@ export class DevicesPage {
   }
 
   static visit() {
-    cy.visit(`/devicemanagement/devices`);
+    cy.visit(`/devicemanagement/devices?tab=onboarding`);
   }
 
   get body() {
@@ -40,7 +40,7 @@ export class DevicesPage {
   }
 
   get firstEnrollmentRequestDetailsLink() {
-    return this.firstEnrollmentRequestRow.find('a');
+    return cy.get('[data-testid="enrollment-request-review-button-0"]');
   }
 
   get pendingEnrollmentRequestsNextPage() {
