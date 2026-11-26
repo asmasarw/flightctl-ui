@@ -44,7 +44,6 @@ import { usePermissionsContext } from '../common/PermissionsContext';
 import FlightCtlModal from '../common/FlightCtlModal';
 import LabelsView from '../common/LabelsView';
 import DetailsPageCard from '../DetailsPage/DetailsPageCard';
-import DeviceCustomDataCard from '../Device/DeviceDetails/DeviceCustomDataCard';
 import SystemInfoDescriptionGroup from '../Device/DeviceDetails/SystemInfoDescriptionGroup';
 import ApproveDeviceModal from '../modals/ApproveDeviceModal/ApproveDeviceModal';
 import EnrollmentRequestStatus from '../Status/EnrollmentRequestStatus';
@@ -212,7 +211,7 @@ const OnboardingRequestReview = ({ enrollmentRequestId, onBack, onResolved }: On
                 <DetailsPageCard>
                   <CardTitle>{t('Request details')}</CardTitle>
                   <CardBody>
-                    <DescriptionList isHorizontal>
+                    <DescriptionList columnModifier={{ default: '2Col' }}>
                       <DescriptionListGroup>
                         <DescriptionListTerm>{t('Status')}</DescriptionListTerm>
                         <DescriptionListDescription>
@@ -220,23 +219,23 @@ const OnboardingRequestReview = ({ enrollmentRequestId, onBack, onResolved }: On
                         </DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Matching policies')}</DescriptionListTerm>
+                        <DescriptionListTerm>{t('Certificate')}</DescriptionListTerm>
                         <DescriptionListDescription>{''}</DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>
-                        <DescriptionListTerm>{t('TPM status')}</DescriptionListTerm>
-                        <DescriptionListDescription>
-                          <EnrollmentRequestTpmStatus er={er} />
-                        </DescriptionListDescription>
-                      </DescriptionListGroup>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Certificate')}</DescriptionListTerm>
+                        <DescriptionListTerm>{t('Matching policies')}</DescriptionListTerm>
                         <DescriptionListDescription>{''}</DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>
                         <DescriptionListTerm>{t('Submitted')}</DescriptionListTerm>
                         <DescriptionListDescription>
                           {timeSinceText(t, er.metadata.creationTimestamp)}
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>{t('TPM status')}</DescriptionListTerm>
+                        <DescriptionListDescription>
+                          <EnrollmentRequestTpmStatus er={er} />
                         </DescriptionListDescription>
                       </DescriptionListGroup>
                     </DescriptionList>
@@ -253,7 +252,7 @@ const OnboardingRequestReview = ({ enrollmentRequestId, onBack, onResolved }: On
                       </StackItem>
                       {systemInfoResult.mainEntries.length > 0 && (
                         <StackItem>
-                          <DescriptionList columnModifier={{ lg: '2Col' }}>
+                          <DescriptionList columnModifier={{ default: '2Col' }}>
                             {systemInfoResult.mainEntries.map((entry) => (
                               <SystemInfoDescriptionGroup key={entry.key} entry={entry} />
                             ))}
@@ -266,7 +265,16 @@ const OnboardingRequestReview = ({ enrollmentRequestId, onBack, onResolved }: On
               </StackItem>
               {customInfoResult.entries.length > 0 && (
                 <StackItem>
-                  <DeviceCustomDataCard customInfoResult={customInfoResult} />
+                  <DetailsPageCard>
+                    <CardTitle>{t('Custom data')}</CardTitle>
+                    <CardBody>
+                      <DescriptionList columnModifier={{ default: '2Col' }}>
+                        {customInfoResult.entries.map((entry) => (
+                          <SystemInfoDescriptionGroup key={entry.key} entry={entry} />
+                        ))}
+                      </DescriptionList>
+                    </CardBody>
+                  </DetailsPageCard>
                 </StackItem>
               )}
             </Stack>
