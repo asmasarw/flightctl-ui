@@ -220,7 +220,9 @@ const OnboardingRequestReview = ({ enrollmentRequestId, onBack, onResolved }: On
                       </DescriptionListGroup>
                       <DescriptionListGroup>
                         <DescriptionListTerm>{t('Certificate')}</DescriptionListTerm>
-                        <DescriptionListDescription>{''}</DescriptionListDescription>
+                        <DescriptionListDescription>
+                          {er.status?.enrollmentCertificateName || ''}
+                        </DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>
                         <DescriptionListTerm>{t('Matching policies')}</DescriptionListTerm>
